@@ -62,6 +62,16 @@ interface NwcNotification {
     notification_type: string;
     notification: Record<string, unknown>;
 }
+interface NwcNotificationMeta {
+    eventId: string;
+    authorPubkey: string;
+    createdAt: number;
+}
+interface NwcSubscribeOptions {
+    types?: string[];
+    sinceNow?: boolean;
+    onError?: (error: unknown, eventId: string) => void;
+}
 interface NwcConnectionParams {
     pubkey: string;
     relays: string[];
@@ -377,9 +387,12 @@ declare class NwcClient {
     /**
      * Subscribe to NWC notification events (kind 23197).
      * Returns an unsubscribe function.
+     *
+     * Accepts either `string[]` (list of notification types) or a
+     * `NwcSubscribeOptions` bag with `types`, `sinceNow`, and `onError`.
      */
-    subscribeNotifications(handler: (n: NwcNotification) => void, types?: string[]): Promise<() => void>;
+    subscribeNotifications(handler: (n: NwcNotification, meta: NwcNotificationMeta) => void, typesOrOpts?: string[] | NwcSubscribeOptions): Promise<() => void>;
     close(): void;
 }
 
-export { type AddressInfo, type CancelHoldInvoiceParams, type DisableOfferParams, type EstimateOnchainFeesResult, type EstimateRoutingFeesParams, type EstimateRoutingFeesResult, type GetBalanceResult, type GetInfoResult, type InvoiceInfo, type ListAddressesParams, type ListAddressesResult, type ListInvoicesParams, type ListInvoicesResult, type ListOffersParams, type ListOffersResult, type ListTransactionsParams, type ListTransactionsResult, type LookupAddressParams, type LookupAddressResult, type LookupInvoiceParams, type LookupInvoiceResult, type LookupOfferParams, type LookupOfferResult, type MakeBip321Params, type MakeBip321Result, type MakeHoldInvoiceParams, type MakeHoldInvoiceResult, type MakeInvoiceParams, type MakeInvoiceResult, type MakeNewAddressParams, type MakeNewAddressResult, type MakeOfferParams, type MakeOfferResult, NWC_ERROR_CODES, NWC_INFO_KIND, NWC_NOTIFICATION_KIND, NWC_REQUEST_KIND, NWC_RESPONSE_KIND, NwcClient, type NwcClientOptions, NwcConnectionError, type NwcConnectionParams, NwcDecryptionError, type NwcErrorCode, type NwcNotification, NwcPublishError, NwcPublishTimeout, NwcReplyTimeout, NwcRequestError, type NwcResponse, NwcTimeoutError, NwcWalletError, type OfferInfo, type PayBip321Params, type PayBip321Result, type PayInvoiceParams, type PayInvoiceResult, type PayKeysendParams, type PayKeysendResult, type PayOfferParams, type PayOfferResult, type PayOnchainParams, type PayOnchainResult, type SettleHoldInvoiceParams, type SignMessageParams, type SignMessageResult, type TransactionInfo, parseConnectionString };
+export { type AddressInfo, type CancelHoldInvoiceParams, type DisableOfferParams, type EstimateOnchainFeesResult, type EstimateRoutingFeesParams, type EstimateRoutingFeesResult, type GetBalanceResult, type GetInfoResult, type InvoiceInfo, type ListAddressesParams, type ListAddressesResult, type ListInvoicesParams, type ListInvoicesResult, type ListOffersParams, type ListOffersResult, type ListTransactionsParams, type ListTransactionsResult, type LookupAddressParams, type LookupAddressResult, type LookupInvoiceParams, type LookupInvoiceResult, type LookupOfferParams, type LookupOfferResult, type MakeBip321Params, type MakeBip321Result, type MakeHoldInvoiceParams, type MakeHoldInvoiceResult, type MakeInvoiceParams, type MakeInvoiceResult, type MakeNewAddressParams, type MakeNewAddressResult, type MakeOfferParams, type MakeOfferResult, NWC_ERROR_CODES, NWC_INFO_KIND, NWC_NOTIFICATION_KIND, NWC_REQUEST_KIND, NWC_RESPONSE_KIND, NwcClient, type NwcClientOptions, NwcConnectionError, type NwcConnectionParams, NwcDecryptionError, type NwcErrorCode, type NwcNotification, type NwcNotificationMeta, NwcPublishError, NwcPublishTimeout, NwcReplyTimeout, NwcRequestError, type NwcResponse, type NwcSubscribeOptions, NwcTimeoutError, NwcWalletError, type OfferInfo, type PayBip321Params, type PayBip321Result, type PayInvoiceParams, type PayInvoiceResult, type PayKeysendParams, type PayKeysendResult, type PayOfferParams, type PayOfferResult, type PayOnchainParams, type PayOnchainResult, type SettleHoldInvoiceParams, type SignMessageParams, type SignMessageResult, type TransactionInfo, parseConnectionString };

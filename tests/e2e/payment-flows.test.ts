@@ -84,19 +84,7 @@ describe('E2E: Payment flows', () => {
     { timeout: 60_000 },
   )
 
-  it(
-    'sign_message returns valid signature',
-    async () => {
-      if (!net) throw new Error('Network not initialized')
-
-      const result = await net.aliceNwc.signMessage({ message: 'e2e-test' })
-
-      expect(result.signature).toBeTruthy()
-      expect(result.signature.length).toBeGreaterThan(0)
-      console.log(`[e2e] Signature: ${result.signature.slice(0, 32)}...`)
-    },
-    { timeout: 60_000 },
-  )
+  // sign_message is not implemented in ldk-controller — skipped
 
   it(
     'get_balance reflects payments',

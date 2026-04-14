@@ -43,6 +43,16 @@ interface NncNotification {
     notification_type: string;
     notification: Record<string, unknown>;
 }
+interface NotificationMeta {
+    eventId: string;
+    authorPubkey: string;
+    createdAt: number;
+}
+interface SubscribeOptions {
+    types?: string[];
+    sinceNow?: boolean;
+    onError?: (error: unknown, eventId: string) => void;
+}
 interface NncConnectionParams {
     pubkey: string;
     relays: string[];
@@ -272,9 +282,12 @@ declare class NncClient {
     /**
      * Subscribe to NNC notification events (kind 23200).
      * Returns an unsubscribe function.
+     *
+     * Accepts either `string[]` (list of notification types) or a
+     * `SubscribeOptions` bag with `types`, `sinceNow`, and `onError`.
      */
-    subscribeNotifications(handler: (n: NncNotification) => void, types?: string[]): Promise<() => void>;
+    subscribeNotifications(handler: (n: NncNotification, meta: NotificationMeta) => void, typesOrOpts?: string[] | SubscribeOptions): Promise<() => void>;
     close(): void;
 }
 
-export { type ChannelFeeInfo, type ChannelInfo, type ChannelPolicy, type CloseChannelParams, type ConnectPeerParams, type DisconnectPeerParams, type ForwardInfo, type GetChannelFeesParams, type GetChannelFeesResult, type GetForwardingHistoryParams, type GetForwardingHistoryResult, type GetNetworkChannelParams, type GetNetworkChannelResult, type GetNetworkNodeParams, type GetNetworkNodeResult, type GetNetworkStatsResult, type GetPendingHtlcsResult, type GrantInfo, type HtlcInfo, type ListChannelsResult, type ListNetworkNodesParams, type ListNetworkNodesResult, type ListPeersResult, NNC_ERROR_CODES, NNC_INFO_KIND, NNC_NOTIFICATION_KIND, NNC_REQUEST_KIND, NNC_RESPONSE_KIND, type NetworkNodeInfo, NncClient, type NncClientOptions, type NncConnectionParams, type NncErrorCode, type NncNotification, type NncResponse, type OpenChannelParams, type PeerInfo, type QueryRoutesParams, type QueryRoutesResult, type RouteHop, type RouteInfo, type SetChannelFeesParams, type UsageProfile, parseConnectionString };
+export { type ChannelFeeInfo, type ChannelInfo, type ChannelPolicy, type CloseChannelParams, type ConnectPeerParams, type DisconnectPeerParams, type ForwardInfo, type GetChannelFeesParams, type GetChannelFeesResult, type GetForwardingHistoryParams, type GetForwardingHistoryResult, type GetNetworkChannelParams, type GetNetworkChannelResult, type GetNetworkNodeParams, type GetNetworkNodeResult, type GetNetworkStatsResult, type GetPendingHtlcsResult, type GrantInfo, type HtlcInfo, type ListChannelsResult, type ListNetworkNodesParams, type ListNetworkNodesResult, type ListPeersResult, NNC_ERROR_CODES, NNC_INFO_KIND, NNC_NOTIFICATION_KIND, NNC_REQUEST_KIND, NNC_RESPONSE_KIND, type NetworkNodeInfo, NncClient, type NncClientOptions, type NncConnectionParams, type NncErrorCode, type NncNotification, type NncResponse, type NotificationMeta, type OpenChannelParams, type PeerInfo, type QueryRoutesParams, type QueryRoutesResult, type RouteHop, type RouteInfo, type SetChannelFeesParams, type SubscribeOptions, type UsageProfile, parseConnectionString };

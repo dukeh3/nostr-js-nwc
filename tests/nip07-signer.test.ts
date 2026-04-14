@@ -91,30 +91,96 @@ describe('Nip07Signer', () => {
       expect(mockExtension.nip44.decrypt).toHaveBeenCalledWith('pubkey123', 'ciphertext')
     })
 
-    it('nip44Encrypt throws when extension has no nip44', async () => {
+    it('nip44Encrypt throws when extension has no nip44 or nip04', async () => {
       ;(globalThis as any).nostr = {
         getPublicKey: vi.fn(),
         signEvent: vi.fn(),
-        // no nip44
+        // no nip44, no nip04
       }
 
       const signer = new Nip07Signer()
       await expect(signer.nip44Encrypt('pk', 'text')).rejects.toThrow(
-        'Extension does not support NIP-44 encryption',
+        'Extension does not support NIP-44 or NIP-04 encryption',
       )
     })
 
-    it('nip44Decrypt throws when extension has no nip44', async () => {
+    it('nip44Decrypt throws when extension has no nip44 or nip04', async () => {
       ;(globalThis as any).nostr = {
         getPublicKey: vi.fn(),
         signEvent: vi.fn(),
-        // no nip44
+        // no nip44, no nip04
       }
 
       const signer = new Nip07Signer()
       await expect(signer.nip44Decrypt('pk', 'ct')).rejects.toThrow(
-        'Extension does not support NIP-44 decryption',
+        'Extension does not support NIP-44 or NIP-04 decryption',
       )
+    })
+  })
+
+  // ─── NIP-04 fallback ──────────────────────────────────────────────
+
+  describe('NIP-04 fallback', () => {
+    it('falls back to nip04.encrypt when nip44 is not available', async () => {
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+      ;(globalThis as any).nostr = {
+        getPublicKey: vi.fn(),
+        signEvent: vi.fn(),
+        nip04: {
+          encrypt: vi.fn().mockResolvedValue('nip04-encrypted'),
+          decrypt: vi.fn(),
+        },
+      }
+
+      const signer = new Nip07Signer()
+      const result = await signer.nip44Encrypt('pk', 'text')
+
+      expect(result).toBe('nip04-encrypted')
+      expect(warnSpy).toHaveBeenCalledWith(
+        'NIP-44 not supported by extension, falling back to NIP-04',
+      )
+      warnSpy.mockRestore()
+    })
+
+    it('falls back to nip04.decrypt when nip44 is not available', async () => {
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+      ;(globalThis as any).nostr = {
+        getPublicKey: vi.fn(),
+        signEvent: vi.fn(),
+        nip04: {
+          encrypt: vi.fn(),
+          decrypt: vi.fn().mockResolvedValue('nip04-decrypted'),
+        },
+      }
+
+      const signer = new Nip07Signer()
+      const result = await signer.nip44Decrypt('pk', 'ct')
+
+      expect(result).toBe('nip04-decrypted')
+      expect(warnSpy).toHaveBeenCalledWith(
+        'NIP-44 not supported by extension, falling back to NIP-04',
+      )
+      warnSpy.mockRestore()
+    })
+
+    it('prefers nip44 over nip04 when both are available', async () => {
+      ;(globalThis as any).nostr = {
+        getPublicKey: vi.fn(),
+        signEvent: vi.fn(),
+        nip44: {
+          encrypt: vi.fn().mockResolvedValue('nip44-encrypted'),
+          decrypt: vi.fn().mockResolvedValue('nip44-decrypted'),
+        },
+        nip04: {
+          encrypt: vi.fn().mockResolvedValue('nip04-encrypted'),
+          decrypt: vi.fn().mockResolvedValue('nip04-decrypted'),
+        },
+      }
+
+      const signer = new Nip07Signer()
+
+      expect(await signer.nip44Encrypt('pk', 'text')).toBe('nip44-encrypted')
+      expect(await signer.nip44Decrypt('pk', 'ct')).toBe('nip44-decrypted')
     })
   })
 })

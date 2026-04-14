@@ -117,6 +117,18 @@ export interface NwcNotification {
   notification: Record<string, unknown>
 }
 
+export interface NwcNotificationMeta {
+  eventId: string
+  authorPubkey: string
+  createdAt: number
+}
+
+export interface NwcSubscribeOptions {
+  types?: string[]
+  sinceNow?: boolean
+  onError?: (error: unknown, eventId: string) => void
+}
+
 // ─── Connection String ────────────────────────────────────────────────────
 
 export interface NwcConnectionParams {
@@ -386,6 +398,67 @@ export interface SignMessageResult {
   signature: string
 }
 
+export interface ListInvoicesParams {
+  from?: number
+  until?: number
+  limit?: number
+  offset?: number
+  state?: string
+}
+
+export interface InvoiceInfo {
+  invoice?: string
+  description?: string
+  payment_hash: string
+  amount: number
+  state: string
+  preimage?: string
+  created_at?: number
+  expires_at?: number
+  settled_at?: number
+}
+
+export interface ListInvoicesResult {
+  invoices: InvoiceInfo[]
+}
+
+export interface ListOffersParams {
+  active_only?: boolean
+  limit?: number
+  offset?: number
+}
+
+export interface OfferInfo {
+  offer: string
+  description?: string
+  amount?: number
+  active: boolean
+  num_payments_received: number
+  total_received: number
+}
+
+export interface ListOffersResult {
+  offers: OfferInfo[]
+}
+
+export interface DisableOfferParams {
+  offer: string
+}
+
+export interface ListAddressesParams {
+  limit?: number
+  offset?: number
+}
+
+export interface AddressInfo {
+  address: string
+  total_received: number
+}
+
+export interface ListAddressesResult {
+  addresses: AddressInfo[]
+}
+
 // ─── Client Options ───────────────────────────────────────────────────────
 
 export interface NwcClientOptions {
@@ -618,37 +691,74 @@ export class NwcClient {
     return r.result as unknown as SignMessageResult
   }
 
+  async listInvoices(p?: ListInvoicesParams): Promise<ListInvoicesResult> {
+    const r = await this.sendRequest('list_invoices', (p ?? {}) as any)
+    return r.result as unknown as ListInvoicesResult
+  }
+
+  async listOffers(p?: ListOffersParams): Promise<ListOffersResult> {
+    const r = await this.sendRequest('list_offers', (p ?? {}) as any)
+    return r.result as unknown as ListOffersResult
+  }
+
+  async disableOffer(p: DisableOfferParams): Promise<void> {
+    await this.sendRequest('disable_offer', p as any)
+  }
+
+  async listAddresses(p?: ListAddressesParams): Promise<ListAddressesResult> {
+    const r = await this.sendRequest('list_addresses', (p ?? {}) as any)
+    return r.result as unknown as ListAddressesResult
+  }
+
   // ─── Notifications ────────────────────────────────────────────────────
 
   /**
    * Subscribe to NWC notification events (kind 23197).
    * Returns an unsubscribe function.
+   *
+   * Accepts either `string[]` (list of notification types) or a
+   * `NwcSubscribeOptions` bag with `types`, `sinceNow`, and `onError`.
    */
   async subscribeNotifications(
-    handler: (n: NwcNotification) => void,
-    types?: string[],
+    handler: (n: NwcNotification, meta: NwcNotificationMeta) => void,
+    typesOrOpts?: string[] | NwcSubscribeOptions,
   ): Promise<() => void> {
+    const opts: NwcSubscribeOptions = Array.isArray(typesOrOpts)
+      ? { types: typesOrOpts }
+      : (typesOrOpts ?? {})
+
     // If types are specified, tell the service via subscribe_notifications
-    if (types && types.length > 0) {
-      await this.sendRequest('subscribe_notifications', { types })
+    if (opts.types && opts.types.length > 0) {
+      await this.sendRequest('subscribe_notifications', { types: opts.types })
     }
 
     const userPubkey = await this.signer.getPublicKey()
+    const filter: Record<string, unknown> = {
+      kinds: [NWC_NOTIFICATION_KIND],
+      authors: [this.walletPubkey],
+      '#p': [userPubkey],
+    }
+    if (opts.sinceNow) {
+      filter.since = Math.floor(Date.now() / 1000)
+    }
+
     const sub = this.pool.subscribeMany(
       this.relayUrls,
-      {
-        kinds: [NWC_NOTIFICATION_KIND],
-        authors: [this.walletPubkey],
-        '#p': [userPubkey],
-      } as any,
+      filter as any,
       {
         onevent: async (event) => {
           try {
             const decrypted = await this.signer.nip44Decrypt(event.pubkey, event.content)
             const notification = JSON.parse(decrypted) as NwcNotification
-            handler(notification)
-          } catch {
-            // Ignore decrypt/parse errors for notifications
+            handler(notification, {
+              eventId: event.id,
+              authorPubkey: event.pubkey,
+              createdAt: event.created_at,
+            })
+          } catch (err) {
+            if (opts.onError) {
+              opts.onError(err, event.id)
+            }
           }
         },
       },

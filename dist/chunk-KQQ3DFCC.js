@@ -1,4 +1,4 @@
-"use strict";Object.defineProperty(exports, "__esModule", {value: true}); function _nullishCoalesce(lhs, rhsFn) { if (lhs != null) { return lhs; } else { return rhsFn(); } } function _optionalChain(ops) { let lastAccessLHS = undefined; let value = ops[0]; let i = 1; while (i < ops.length) { const op = ops[i]; const fn = ops[i + 1]; i += 2; if ((op === 'optionalAccess' || op === 'optionalCall') && value == null) { return undefined; } if (op === 'access' || op === 'optionalAccess') { lastAccessLHS = value; value = fn(value); } else if (op === 'call' || op === 'optionalCall') { value = fn((...args) => value.call(lastAccessLHS, ...args)); lastAccessLHS = undefined; } } return value; } var _class;// nip47.ts
+// nip47.ts
 var NWC_INFO_KIND = 13194;
 var NWC_REQUEST_KIND = 23194;
 var NWC_RESPONSE_KIND = 23195;
@@ -10,8 +10,8 @@ var NwcRequestError = class extends Error {
     this.code = code;
     this.name = "NwcRequestError";
   }
-  
-  
+  method;
+  code;
 };
 var NwcWalletError = class extends NwcRequestError {
   constructor(method, code, message) {
@@ -81,25 +81,25 @@ function parseConnectionString(uri) {
   if (relays.length === 0) {
     throw new Error("Invalid NWC connection string: missing relay parameter");
   }
-  const secret = _nullishCoalesce(url.searchParams.get("secret"), () => ( void 0));
-  const lud16 = _nullishCoalesce(url.searchParams.get("lud16"), () => ( void 0));
+  const secret = url.searchParams.get("secret") ?? void 0;
+  const lud16 = url.searchParams.get("lud16") ?? void 0;
   return { pubkey, relays, secret, lud16 };
 }
 var DEFAULT_TIMEOUT_MS = 3e4;
-var NwcClient = (_class = class _NwcClient {
-  
-  
-  
-  
-  
-  
-  __init() {this.subscriptions = []}
-  constructor(signer, walletPubkey, relayUrls, opts) {;_class.prototype.__init.call(this);
+var NwcClient = class _NwcClient {
+  signer;
+  walletPubkey;
+  relayUrls;
+  pool;
+  ownsPool;
+  timeoutMs;
+  subscriptions = [];
+  constructor(signer, walletPubkey, relayUrls, opts) {
     this.signer = signer;
     this.walletPubkey = walletPubkey;
     this.relayUrls = relayUrls;
-    this.timeoutMs = _nullishCoalesce(_optionalChain([opts, 'optionalAccess', _ => _.timeoutMs]), () => ( DEFAULT_TIMEOUT_MS));
-    if (!_optionalChain([opts, 'optionalAccess', _2 => _2.pool])) {
+    this.timeoutMs = opts?.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+    if (!opts?.pool) {
       throw new Error("A pool instance is required. Pass { pool: new SimplePool() } in opts.");
     }
     this.pool = opts.pool;
@@ -206,7 +206,7 @@ var NwcClient = (_class = class _NwcClient {
     return r.result;
   }
   async listTransactions(p) {
-    const r = await this.sendRequest("list_transactions", _nullishCoalesce(p, () => ( {})));
+    const r = await this.sendRequest("list_transactions", p ?? {});
     return r.result;
   }
   async payOffer(p) {
@@ -226,7 +226,7 @@ var NwcClient = (_class = class _NwcClient {
     return r.result;
   }
   async makeNewAddress(p) {
-    const r = await this.sendRequest("make_new_address", _nullishCoalesce(p, () => ( {})));
+    const r = await this.sendRequest("make_new_address", p ?? {});
     return r.result;
   }
   async lookupAddress(p) {
@@ -238,7 +238,7 @@ var NwcClient = (_class = class _NwcClient {
     return r.result;
   }
   async makeBip321(p) {
-    const r = await this.sendRequest("make_bip321", _nullishCoalesce(p, () => ( {})));
+    const r = await this.sendRequest("make_bip321", p ?? {});
     return r.result;
   }
   async estimateOnchainFees() {
@@ -264,44 +264,59 @@ var NwcClient = (_class = class _NwcClient {
     return r.result;
   }
   async listInvoices(p) {
-    const r = await this.sendRequest("list_invoices", _nullishCoalesce(p, () => ( {})));
+    const r = await this.sendRequest("list_invoices", p ?? {});
     return r.result;
   }
   async listOffers(p) {
-    const r = await this.sendRequest("list_offers", _nullishCoalesce(p, () => ( {})));
+    const r = await this.sendRequest("list_offers", p ?? {});
     return r.result;
   }
   async disableOffer(p) {
     await this.sendRequest("disable_offer", p);
   }
   async listAddresses(p) {
-    const r = await this.sendRequest("list_addresses", _nullishCoalesce(p, () => ( {})));
+    const r = await this.sendRequest("list_addresses", p ?? {});
     return r.result;
   }
   // ─── Notifications ────────────────────────────────────────────────────
   /**
    * Subscribe to NWC notification events (kind 23197).
    * Returns an unsubscribe function.
+   *
+   * Accepts either `string[]` (list of notification types) or a
+   * `NwcSubscribeOptions` bag with `types`, `sinceNow`, and `onError`.
    */
-  async subscribeNotifications(handler, types) {
-    if (types && types.length > 0) {
-      await this.sendRequest("subscribe_notifications", { types });
+  async subscribeNotifications(handler, typesOrOpts) {
+    const opts = Array.isArray(typesOrOpts) ? { types: typesOrOpts } : typesOrOpts ?? {};
+    if (opts.types && opts.types.length > 0) {
+      await this.sendRequest("subscribe_notifications", { types: opts.types });
     }
     const userPubkey = await this.signer.getPublicKey();
+    const filter = {
+      kinds: [NWC_NOTIFICATION_KIND],
+      authors: [this.walletPubkey],
+      "#p": [userPubkey]
+    };
+    if (opts.sinceNow) {
+      filter.since = Math.floor(Date.now() / 1e3);
+    }
     const sub = this.pool.subscribeMany(
       this.relayUrls,
-      {
-        kinds: [NWC_NOTIFICATION_KIND],
-        authors: [this.walletPubkey],
-        "#p": [userPubkey]
-      },
+      filter,
       {
         onevent: async (event) => {
           try {
             const decrypted = await this.signer.nip44Decrypt(event.pubkey, event.content);
             const notification = JSON.parse(decrypted);
-            handler(notification);
-          } catch (e) {
+            handler(notification, {
+              eventId: event.id,
+              authorPubkey: event.pubkey,
+              createdAt: event.created_at
+            });
+          } catch (err) {
+            if (opts.onError) {
+              opts.onError(err, event.id);
+            }
           }
         }
       }
@@ -322,23 +337,23 @@ var NwcClient = (_class = class _NwcClient {
       this.pool.close(this.relayUrls);
     }
   }
-}, _class);
+};
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-exports.NWC_INFO_KIND = NWC_INFO_KIND; exports.NWC_REQUEST_KIND = NWC_REQUEST_KIND; exports.NWC_RESPONSE_KIND = NWC_RESPONSE_KIND; exports.NWC_NOTIFICATION_KIND = NWC_NOTIFICATION_KIND; exports.NwcRequestError = NwcRequestError; exports.NwcWalletError = NwcWalletError; exports.NwcTimeoutError = NwcTimeoutError; exports.NwcPublishTimeout = NwcPublishTimeout; exports.NwcReplyTimeout = NwcReplyTimeout; exports.NwcPublishError = NwcPublishError; exports.NwcConnectionError = NwcConnectionError; exports.NwcDecryptionError = NwcDecryptionError; exports.NWC_ERROR_CODES = NWC_ERROR_CODES; exports.parseConnectionString = parseConnectionString; exports.NwcClient = NwcClient;
-//# sourceMappingURL=chunk-OJZJGHPS.cjs.map
+export {
+  NWC_INFO_KIND,
+  NWC_REQUEST_KIND,
+  NWC_RESPONSE_KIND,
+  NWC_NOTIFICATION_KIND,
+  NwcRequestError,
+  NwcWalletError,
+  NwcTimeoutError,
+  NwcPublishTimeout,
+  NwcReplyTimeout,
+  NwcPublishError,
+  NwcConnectionError,
+  NwcDecryptionError,
+  NWC_ERROR_CODES,
+  parseConnectionString,
+  NwcClient
+};
+//# sourceMappingURL=chunk-KQQ3DFCC.js.map

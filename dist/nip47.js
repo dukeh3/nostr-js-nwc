@@ -14,7 +14,7 @@ import {
   NwcTimeoutError,
   NwcWalletError,
   parseConnectionString
-} from "./chunk-EUCHQOUG.js";
+} from "./chunk-KQQ3DFCC.js";
 export {
   NWC_ERROR_CODES,
   NWC_INFO_KIND,

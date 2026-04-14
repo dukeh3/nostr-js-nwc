@@ -12,4 +12,6 @@ import type { Signer } from 'nostr-tools/signer'
 export interface NwcSigner extends Signer {
   nip44Encrypt(pubkey: string, plaintext: string): Promise<string>
   nip44Decrypt(pubkey: string, ciphertext: string): Promise<string>
+  /** Clean up resources (e.g., close a NIP-46 bunker connection). */
+  close?(): Promise<void>
 }

@@ -561,6 +561,142 @@ describe('NwcClient', () => {
     client.close()
   })
 
+  // ─── list_invoices ──────────────────────────────────────────────────────
+
+  it('listInvoices with params', async () => {
+    const pool = createMockPool({
+      result_type: 'list_invoices',
+      result: { invoices: [{ invoice: 'lnbc...', payment_hash: 'hash1', amount: 5000, state: 'settled' }] },
+    })
+
+    const client = new NwcClient(signer, walletPubkey, relayUrls, { pool: pool as any })
+    const result = await client.listInvoices({ limit: 10, state: 'settled' })
+
+    expect(result.invoices).toHaveLength(1)
+    expect(result.invoices[0].payment_hash).toBe('hash1')
+    expect(signer.nip44Encrypt).toHaveBeenCalledWith(
+      walletPubkey,
+      JSON.stringify({ method: 'list_invoices', params: { limit: 10, state: 'settled' } }),
+    )
+
+    client.close()
+  })
+
+  it('listInvoices without params', async () => {
+    const pool = createMockPool({
+      result_type: 'list_invoices',
+      result: { invoices: [] },
+    })
+
+    const client = new NwcClient(signer, walletPubkey, relayUrls, { pool: pool as any })
+    const result = await client.listInvoices()
+
+    expect(result.invoices).toEqual([])
+    expect(signer.nip44Encrypt).toHaveBeenCalledWith(
+      walletPubkey,
+      JSON.stringify({ method: 'list_invoices', params: {} }),
+    )
+
+    client.close()
+  })
+
+  // ─── list_offers ───────────────────────────────────────────────────────
+
+  it('listOffers with params', async () => {
+    const pool = createMockPool({
+      result_type: 'list_offers',
+      result: { offers: [{ offer: 'lno1...', active: true, num_payments_received: 3, total_received: 9000 }] },
+    })
+
+    const client = new NwcClient(signer, walletPubkey, relayUrls, { pool: pool as any })
+    const result = await client.listOffers({ active_only: true, limit: 5 })
+
+    expect(result.offers).toHaveLength(1)
+    expect(result.offers[0].active).toBe(true)
+    expect(signer.nip44Encrypt).toHaveBeenCalledWith(
+      walletPubkey,
+      JSON.stringify({ method: 'list_offers', params: { active_only: true, limit: 5 } }),
+    )
+
+    client.close()
+  })
+
+  it('listOffers without params', async () => {
+    const pool = createMockPool({
+      result_type: 'list_offers',
+      result: { offers: [] },
+    })
+
+    const client = new NwcClient(signer, walletPubkey, relayUrls, { pool: pool as any })
+    const result = await client.listOffers()
+
+    expect(result.offers).toEqual([])
+    expect(signer.nip44Encrypt).toHaveBeenCalledWith(
+      walletPubkey,
+      JSON.stringify({ method: 'list_offers', params: {} }),
+    )
+
+    client.close()
+  })
+
+  // ─── disable_offer ─────────────────────────────────────────────────────
+
+  it('disableOffer sends correct params (void return)', async () => {
+    const pool = createMockPool({
+      result_type: 'disable_offer',
+      result: {},
+    })
+
+    const client = new NwcClient(signer, walletPubkey, relayUrls, { pool: pool as any })
+    await client.disableOffer({ offer: 'lno1...' })
+
+    expect(signer.nip44Encrypt).toHaveBeenCalledWith(
+      walletPubkey,
+      JSON.stringify({ method: 'disable_offer', params: { offer: 'lno1...' } }),
+    )
+
+    client.close()
+  })
+
+  // ─── list_addresses ────────────────────────────────────────────────────
+
+  it('listAddresses with params', async () => {
+    const pool = createMockPool({
+      result_type: 'list_addresses',
+      result: { addresses: [{ address: 'bcrt1q...', total_received: 50000 }] },
+    })
+
+    const client = new NwcClient(signer, walletPubkey, relayUrls, { pool: pool as any })
+    const result = await client.listAddresses({ limit: 20 })
+
+    expect(result.addresses).toHaveLength(1)
+    expect(result.addresses[0].address).toBe('bcrt1q...')
+    expect(signer.nip44Encrypt).toHaveBeenCalledWith(
+      walletPubkey,
+      JSON.stringify({ method: 'list_addresses', params: { limit: 20 } }),
+    )
+
+    client.close()
+  })
+
+  it('listAddresses without params', async () => {
+    const pool = createMockPool({
+      result_type: 'list_addresses',
+      result: { addresses: [] },
+    })
+
+    const client = new NwcClient(signer, walletPubkey, relayUrls, { pool: pool as any })
+    const result = await client.listAddresses()
+
+    expect(result.addresses).toEqual([])
+    expect(signer.nip44Encrypt).toHaveBeenCalledWith(
+      walletPubkey,
+      JSON.stringify({ method: 'list_addresses', params: {} }),
+    )
+
+    client.close()
+  })
+
   // ─── Encryption tag test ─────────────────────────────────────────────────
 
   it('includes encryption nip44_v2 tag in published events', async () => {

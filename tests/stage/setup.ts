@@ -11,9 +11,8 @@ import WebSocket from 'ws'
 import { SimplePool, generateSecretKey, getPublicKey } from 'nostr-tools'
 import { NwcClient } from '../../nip47.js'
 import { NncClient } from '../../nipXX.js'
+import type { UsageProfile } from '../../nipXX.js'
 import { SecretKeySigner } from '../../src/signer/secret-key.js'
-import { publishGrant } from '../../src/grant.js'
-import type { UsageProfile } from '../../src/grant.js'
 
 // ─── Stage environment constants ────────────────────────────────────────────
 
@@ -44,8 +43,13 @@ export async function setupStagedNetwork(): Promise<StagedNetwork> {
   const clientPk = getPublicKey(clientSk)
 
   // 2. Publish grants for both nodes
+  const pool = new SimplePool()
+  const grantOpts = { pool, timeoutMs: 15_000 }
+
   const ownerSk = generateSecretKey()
   const ownerSigner = new SecretKeySigner(ownerSk)
+  const aliceGrantNnc = new NncClient(ownerSigner, ALICE_SERVICE_PK, [RELAY_URL], grantOpts)
+  const bobGrantNnc = new NncClient(ownerSigner, BOB_SERVICE_PK, [RELAY_URL], grantOpts)
 
   const nwcMethods: UsageProfile['methods'] = {
     get_info: {},
@@ -74,8 +78,8 @@ export async function setupStagedNetwork(): Promise<StagedNetwork> {
 
   console.log('[stage] Publishing grants...')
   await Promise.all([
-    publishGrant(ownerSigner, RELAY_URL, ALICE_SERVICE_PK, clientPk, grant),
-    publishGrant(ownerSigner, RELAY_URL, BOB_SERVICE_PK, clientPk, grant),
+    aliceGrantNnc.publishGrant(clientPk, grant),
+    bobGrantNnc.publishGrant(clientPk, grant),
   ])
   console.log('[stage] Grants published')
 
@@ -83,7 +87,6 @@ export async function setupStagedNetwork(): Promise<StagedNetwork> {
   await new Promise((r) => setTimeout(r, 2_000))
 
   // 4. Create SDK clients
-  const pool = new SimplePool()
   const signer = new SecretKeySigner(clientSk)
   const clientOpts = { pool, timeoutMs: 30_000 }
 

@@ -6,7 +6,7 @@ import {
   NNC_RESPONSE_KIND,
   NncClient,
   parseConnectionString as parseConnectionString2
-} from "./chunk-O7P2WJ7M.js";
+} from "./chunk-SAHPIKNV.js";
 import {
   NWC_ERROR_CODES,
   NWC_INFO_KIND,
@@ -23,7 +23,7 @@ import {
   NwcTimeoutError,
   NwcWalletError,
   parseConnectionString
-} from "./chunk-EUCHQOUG.js";
+} from "./chunk-KQQ3DFCC.js";
 
 // src/signer/secret-key.ts
 import { finalizeEvent, getPublicKey } from "nostr-tools/pure";

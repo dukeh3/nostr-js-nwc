@@ -3,7 +3,7 @@ import {
   NwcPublishError,
   NwcReplyTimeout,
   NwcWalletError
-} from "./chunk-EUCHQOUG.js";
+} from "./chunk-KQQ3DFCC.js";
 
 // nipXX.ts
 var GRANT_KIND = 30078;
@@ -279,26 +279,41 @@ var NncClient = class _NncClient {
   /**
    * Subscribe to NNC notification events (kind 23200).
    * Returns an unsubscribe function.
+   *
+   * Accepts either `string[]` (list of notification types) or a
+   * `SubscribeOptions` bag with `types`, `sinceNow`, and `onError`.
    */
-  async subscribeNotifications(handler, types) {
-    if (types && types.length > 0) {
-      await this.sendRequest("subscribe_notifications", { types });
+  async subscribeNotifications(handler, typesOrOpts) {
+    const opts = Array.isArray(typesOrOpts) ? { types: typesOrOpts } : typesOrOpts ?? {};
+    if (opts.types && opts.types.length > 0) {
+      await this.sendRequest("subscribe_notifications", { types: opts.types });
     }
     const userPubkey = await this.signer.getPublicKey();
+    const filter = {
+      kinds: [NNC_NOTIFICATION_KIND],
+      authors: [this.servicePubkey],
+      "#p": [userPubkey]
+    };
+    if (opts.sinceNow) {
+      filter.since = Math.floor(Date.now() / 1e3);
+    }
     const sub = this.pool.subscribeMany(
       this.relayUrls,
-      {
-        kinds: [NNC_NOTIFICATION_KIND],
-        authors: [this.servicePubkey],
-        "#p": [userPubkey]
-      },
+      filter,
       {
         onevent: async (event) => {
           try {
             const decrypted = await this.signer.nip44Decrypt(event.pubkey, event.content);
             const notification = JSON.parse(decrypted);
-            handler(notification);
-          } catch {
+            handler(notification, {
+              eventId: event.id,
+              authorPubkey: event.pubkey,
+              createdAt: event.created_at
+            });
+          } catch (err) {
+            if (opts.onError) {
+              opts.onError(err, event.id);
+            }
           }
         }
       }
@@ -330,4 +345,4 @@ export {
   parseConnectionString,
   NncClient
 };
-//# sourceMappingURL=chunk-O7P2WJ7M.js.map
+//# sourceMappingURL=chunk-SAHPIKNV.js.map

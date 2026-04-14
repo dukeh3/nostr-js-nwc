@@ -15,9 +15,8 @@ import { describe, it, afterAll, expect } from 'vitest'
 import { SimplePool, generateSecretKey, getPublicKey } from 'nostr-tools'
 import { NwcClient, NwcWalletError } from '../../nip47.js'
 import { NncClient } from '../../nipXX.js'
+import type { UsageProfile } from '../../nipXX.js'
 import { SecretKeySigner } from '../../src/signer/secret-key.js'
-import { publishGrant } from '../../src/grant.js'
-import type { UsageProfile } from '../../src/grant.js'
 import {
   startRelay,
   startBitcoind,
@@ -74,7 +73,8 @@ describe('E2E: Grant enforcement', () => {
         // no control field
       }
 
-      await publishGrant(ownerSigner, relay.url, servicePk, clientPk, grant)
+      const grantNnc = new NncClient(ownerSigner, servicePk, [relay.url], { pool, timeoutMs: 15_000 })
+      await grantNnc.publishGrant(clientPk, grant)
       console.log('[e2e] Grant published (get_info only)')
       await sleep(2_000)
 

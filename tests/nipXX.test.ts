@@ -590,6 +590,151 @@ describe('NncClient', () => {
     })
   })
 
+  // ─── Grant Management ────────────────────────────────────────────────
+
+  describe('publishGrant', () => {
+    it('signs and publishes a kind 30078 event with correct d-tag', async () => {
+      const pool = nncPool()
+      pool.publish = vi.fn().mockReturnValue([Promise.resolve('ok')])
+
+      const client = new NncClient(signer, servicePubkey, relayUrls, { pool: pool as any })
+      const callerPk = 'ee'.repeat(32)
+      const profile = { methods: { get_info: {} } }
+
+      const eventId = await client.publishGrant(callerPk, profile)
+
+      expect(eventId).toBeDefined()
+      expect(signer.signEvent).toHaveBeenCalledWith(
+        expect.objectContaining({
+          kind: 30078,
+          content: JSON.stringify(profile),
+          tags: expect.arrayContaining([
+            ['d', `${servicePubkey}:${callerPk}`],
+            ['p', servicePubkey],
+          ]),
+        }),
+      )
+      expect(pool.publish).toHaveBeenCalledWith(relayUrls, expect.any(Object))
+
+      client.close()
+    })
+
+    it('throws NwcPublishError when all relays reject', async () => {
+      const pool = nncPool()
+      pool.publish = vi.fn().mockReturnValue([Promise.reject(new Error('rejected'))])
+
+      const client = new NncClient(signer, servicePubkey, relayUrls, { pool: pool as any })
+
+      await expect(
+        client.publishGrant('ee'.repeat(32), { methods: { get_info: {} } }),
+      ).rejects.toThrow('All relays rejected')
+
+      client.close()
+    })
+  })
+
+  describe('revokeGrant', () => {
+    it('publishes a kind 30078 event with empty content', async () => {
+      const pool = nncPool()
+      pool.publish = vi.fn().mockReturnValue([Promise.resolve('ok')])
+
+      const client = new NncClient(signer, servicePubkey, relayUrls, { pool: pool as any })
+      const callerPk = 'ee'.repeat(32)
+
+      await client.revokeGrant(callerPk)
+
+      expect(signer.signEvent).toHaveBeenCalledWith(
+        expect.objectContaining({
+          kind: 30078,
+          content: '',
+          tags: expect.arrayContaining([
+            ['d', `${servicePubkey}:${callerPk}`],
+          ]),
+        }),
+      )
+
+      client.close()
+    })
+  })
+
+  describe('listGrants', () => {
+    it('fetches kind 30078 events and parses grants', async () => {
+      const callerPk = 'ee'.repeat(32)
+      const profile = { methods: { get_info: {}, get_balance: {} } }
+
+      const pool = nncPool()
+      pool.subscribeMany = vi.fn().mockImplementation((_relays: any, _filter: any, params: any) => {
+        setTimeout(() => {
+          params.onevent({
+            id: 'grant-1',
+            pubkey: 'owner-pk',
+            kind: 30078,
+            created_at: 1700000000,
+            content: JSON.stringify(profile),
+            tags: [['d', `${servicePubkey}:${callerPk}`], ['p', servicePubkey]],
+            sig: 'sig',
+          })
+          params.oneose()
+        }, 10)
+        return { close: vi.fn() }
+      })
+
+      const client = new NncClient(signer, servicePubkey, relayUrls, { pool: pool as any })
+      const grants = await client.listGrants()
+
+      expect(grants).toHaveLength(1)
+      expect(grants[0].callerPubkey).toBe(callerPk)
+      expect(grants[0].profile).toEqual(profile)
+      expect(grants[0].eventId).toBe('grant-1')
+      expect(grants[0].createdAt).toBe(1700000000)
+
+      client.close()
+    })
+
+    it('skips revoked grants (empty content)', async () => {
+      const callerPk = 'ee'.repeat(32)
+
+      const pool = nncPool()
+      pool.subscribeMany = vi.fn().mockImplementation((_relays: any, _filter: any, params: any) => {
+        setTimeout(() => {
+          params.onevent({
+            id: 'grant-revoked',
+            pubkey: 'owner-pk',
+            kind: 30078,
+            created_at: 1700000000,
+            content: '',
+            tags: [['d', `${servicePubkey}:${callerPk}`], ['p', servicePubkey]],
+            sig: 'sig',
+          })
+          params.oneose()
+        }, 10)
+        return { close: vi.fn() }
+      })
+
+      const client = new NncClient(signer, servicePubkey, relayUrls, { pool: pool as any })
+      const grants = await client.listGrants()
+
+      expect(grants).toHaveLength(0)
+
+      client.close()
+    })
+
+    it('returns empty array when no grants exist', async () => {
+      const pool = nncPool()
+      pool.subscribeMany = vi.fn().mockImplementation((_relays: any, _filter: any, params: any) => {
+        setTimeout(() => params.oneose(), 10)
+        return { close: vi.fn() }
+      })
+
+      const client = new NncClient(signer, servicePubkey, relayUrls, { pool: pool as any })
+      const grants = await client.listGrants()
+
+      expect(grants).toEqual([])
+
+      client.close()
+    })
+  })
+
   // ─── Lifecycle test ────────────────────────────────────────────────────
 
   it('close() closes all active subscriptions', async () => {

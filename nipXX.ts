@@ -17,6 +17,23 @@ import {
   NwcDecryptionError,
 } from './nip47.js'
 
+// ─── Grant Kind ──────────────────────────────────────────────────────────
+
+const GRANT_KIND = 30078
+
+export interface UsageProfile {
+  methods?: Record<string, Record<string, unknown>>
+  control?: Record<string, Record<string, unknown>>
+  quota?: { rate_per_micro?: number; max_capacity?: number }
+}
+
+export interface GrantInfo {
+  callerPubkey: string
+  profile: UsageProfile
+  eventId: string
+  createdAt: number
+}
+
 // ─── Event Kinds ──────────────────────────────────────────────────────────
 
 export const NNC_INFO_KIND = 13198
@@ -52,6 +69,18 @@ export interface NncResponse {
 export interface NncNotification {
   notification_type: string
   notification: Record<string, unknown>
+}
+
+export interface NotificationMeta {
+  eventId: string
+  authorPubkey: string
+  createdAt: number
+}
+
+export interface SubscribeOptions {
+  types?: string[]
+  sinceNow?: boolean
+  onError?: (error: unknown, eventId: string) => void
 }
 
 // ─── Connection String ────────────────────────────────────────────────────
@@ -487,36 +516,149 @@ export class NncClient {
     return r.result as unknown as GetNetworkChannelResult
   }
 
+  // ─── Grant Management ─────────────────────────────────────────────────
+
+  /**
+   * Publish a kind 30078 grant for a caller pubkey.
+   * Uses the pool already configured in this client.
+   */
+  async publishGrant(callerPubkey: string, profile: UsageProfile): Promise<string> {
+    const event = await this.signer.signEvent({
+      kind: GRANT_KIND,
+      created_at: Math.floor(Date.now() / 1000),
+      tags: [
+        ['d', `${this.servicePubkey}:${callerPubkey}`],
+        ['p', this.servicePubkey],
+      ],
+      content: JSON.stringify(profile),
+    })
+
+    const publishPromises = this.pool.publish(this.relayUrls, event as any)
+    const results = await Promise.allSettled(publishPromises)
+    const allFailed = results.every((r) => r.status === 'rejected')
+    if (allFailed) {
+      throw new NwcPublishError('publish_grant', 'All relays rejected the grant event')
+    }
+
+    return event.id
+  }
+
+  /**
+   * Revoke a grant by publishing an empty profile (kind 30078 with empty content).
+   * The relay replaces the previous event with the same d-tag.
+   */
+  async revokeGrant(callerPubkey: string): Promise<string> {
+    const event = await this.signer.signEvent({
+      kind: GRANT_KIND,
+      created_at: Math.floor(Date.now() / 1000),
+      tags: [
+        ['d', `${this.servicePubkey}:${callerPubkey}`],
+        ['p', this.servicePubkey],
+      ],
+      content: '',
+    })
+
+    const publishPromises = this.pool.publish(this.relayUrls, event as any)
+    const results = await Promise.allSettled(publishPromises)
+    const allFailed = results.every((r) => r.status === 'rejected')
+    if (allFailed) {
+      throw new NwcPublishError('revoke_grant', 'All relays rejected the revoke event')
+    }
+
+    return event.id
+  }
+
+  /**
+   * List all grants for this service by fetching kind 30078 events.
+   */
+  async listGrants(): Promise<GrantInfo[]> {
+    return new Promise<GrantInfo[]>((resolve) => {
+      const grants: GrantInfo[] = []
+      const timer = setTimeout(() => {
+        sub.close()
+        resolve(grants)
+      }, this.timeoutMs)
+
+      const sub = this.pool.subscribeMany(
+        this.relayUrls,
+        { kinds: [GRANT_KIND], '#p': [this.servicePubkey], limit: 500 } as any,
+        {
+          onevent: (event: any) => {
+            const dTag = event.tags?.find((t: string[]) => t[0] === 'd')?.[1] as string | undefined
+            if (!dTag?.startsWith(this.servicePubkey + ':')) return
+            const callerPubkey = dTag.slice(this.servicePubkey.length + 1)
+            if (callerPubkey.length !== 64) return
+            if (!event.content) return // skip revoked grants
+            try {
+              const profile = JSON.parse(event.content) as UsageProfile
+              grants.push({
+                callerPubkey,
+                profile,
+                eventId: event.id,
+                createdAt: event.created_at,
+              })
+            } catch {
+              // skip unparseable grants
+            }
+          },
+          oneose: () => {
+            clearTimeout(timer)
+            sub.close()
+            resolve(grants)
+          },
+        },
+      )
+    })
+  }
+
   // ─── Notifications ────────────────────────────────────────────────────
 
   /**
    * Subscribe to NNC notification events (kind 23200).
    * Returns an unsubscribe function.
+   *
+   * Accepts either `string[]` (list of notification types) or a
+   * `SubscribeOptions` bag with `types`, `sinceNow`, and `onError`.
    */
   async subscribeNotifications(
-    handler: (n: NncNotification) => void,
-    types?: string[],
+    handler: (n: NncNotification, meta: NotificationMeta) => void,
+    typesOrOpts?: string[] | SubscribeOptions,
   ): Promise<() => void> {
-    if (types && types.length > 0) {
-      await this.sendRequest('subscribe_notifications', { types })
+    const opts: SubscribeOptions = Array.isArray(typesOrOpts)
+      ? { types: typesOrOpts }
+      : (typesOrOpts ?? {})
+
+    if (opts.types && opts.types.length > 0) {
+      await this.sendRequest('subscribe_notifications', { types: opts.types })
     }
 
     const userPubkey = await this.signer.getPublicKey()
+    const filter: Record<string, unknown> = {
+      kinds: [NNC_NOTIFICATION_KIND],
+      authors: [this.servicePubkey],
+      '#p': [userPubkey],
+    }
+    if (opts.sinceNow) {
+      filter.since = Math.floor(Date.now() / 1000)
+    }
+
     const sub = this.pool.subscribeMany(
       this.relayUrls,
-      {
-        kinds: [NNC_NOTIFICATION_KIND],
-        authors: [this.servicePubkey],
-        '#p': [userPubkey],
-      } as any,
+      filter as any,
       {
         onevent: async (event) => {
           try {
             const decrypted = await this.signer.nip44Decrypt(event.pubkey, event.content)
             const notification = JSON.parse(decrypted) as NncNotification
-            handler(notification)
-          } catch {
-            // Ignore decrypt/parse errors for notifications
+            handler(notification, {
+              eventId: event.id,
+              authorPubkey: event.pubkey,
+              createdAt: event.created_at,
+            })
+          } catch (err) {
+            if (opts.onError) {
+              opts.onError(err, event.id)
+            }
           }
         },
       },

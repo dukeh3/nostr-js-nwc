@@ -316,9 +316,8 @@ export function skHex(sk: Uint8Array): string {
 import { SimplePool, generateSecretKey, getPublicKey } from 'nostr-tools'
 import { NwcClient } from '../../nip47.js'
 import { NncClient } from '../../nipXX.js'
+import type { UsageProfile } from '../../nipXX.js'
 import { SecretKeySigner } from '../../src/signer/secret-key.js'
-import { publishGrant } from '../../src/grant.js'
-import type { UsageProfile } from '../../src/grant.js'
 
 export interface TwoNodeNetwork {
   relay: RelayInfo
@@ -398,8 +397,13 @@ export async function setupTwoNodeNetwork(opts?: {
   )
 
   // ── 4. Publish grants ────────────────────────────────────────────────
+  const pool = new SimplePool()
+  const grantOpts = { pool, timeoutMs: 15_000 }
+
   const ownerSk = generateSecretKey()
   const ownerSigner = new SecretKeySigner(ownerSk)
+  const aliceGrantNnc = new NncClient(ownerSigner, aliceServicePk, [relay.url], grantOpts)
+  const bobGrantNnc = new NncClient(ownerSigner, bobServicePk, [relay.url], grantOpts)
 
   const aliceGrant: UsageProfile = {
     methods: opts?.aliceGrantMethods ?? {
@@ -423,6 +427,10 @@ export async function setupTwoNodeNetwork(opts?: {
       settle_hold_invoice: {},
       cancel_hold_invoice: {},
       estimate_routing_fees: {},
+      list_invoices: {},
+      list_offers: {},
+      disable_offer: {},
+      list_addresses: {},
     },
     control: opts?.aliceGrantControl ?? {
       connect_peer: {},
@@ -447,6 +455,12 @@ export async function setupTwoNodeNetwork(opts?: {
       make_new_address: {},
       lookup_address: {},
       make_bip321: {},
+      pay_invoice: {},
+      pay_offer: {},
+      list_invoices: {},
+      list_offers: {},
+      disable_offer: {},
+      list_addresses: {},
     },
     control: opts?.bobGrantControl ?? {
       list_channels: {},
@@ -455,15 +469,14 @@ export async function setupTwoNodeNetwork(opts?: {
   }
 
   await Promise.all([
-    publishGrant(ownerSigner, relay.url, aliceServicePk, aliceClientPk, aliceGrant),
-    publishGrant(ownerSigner, relay.url, bobServicePk, bobClientPk, bobGrant),
+    aliceGrantNnc.publishGrant(aliceClientPk, aliceGrant),
+    bobGrantNnc.publishGrant(bobClientPk, bobGrant),
   ])
   console.log('[e2e] Grants published')
 
   await sleep(2_000)
 
   // ── 5. Create SDK clients ────────────────────────────────────────────
-  const pool = new SimplePool()
   const clientOpts = { pool, timeoutMs: 60_000 }
 
   const aliceNwc = new NwcClient(

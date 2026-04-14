@@ -3,7 +3,7 @@
 
 
 
-var _chunkOJZJGHPScjs = require('./chunk-OJZJGHPS.cjs');
+var _chunk6N6AEFRBcjs = require('./chunk-6N6AEFRB.cjs');
 
 // nipXX.ts
 var GRANT_KIND = 30078;
@@ -83,7 +83,7 @@ var NncClient = (_class = class _NncClient {
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => {
         sub.close();
-        reject(new (0, _chunkOJZJGHPScjs.NwcReplyTimeout)(method));
+        reject(new (0, _chunk6N6AEFRBcjs.NwcReplyTimeout)(method));
       }, this.timeoutMs);
       const sub = this.pool.subscribeMany(
         this.relayUrls,
@@ -104,14 +104,14 @@ var NncClient = (_class = class _NncClient {
               const response = JSON.parse(decrypted);
               if (response.error) {
                 reject(
-                  new (0, _chunkOJZJGHPScjs.NwcWalletError)(method, response.error.code, response.error.message)
+                  new (0, _chunk6N6AEFRBcjs.NwcWalletError)(method, response.error.code, response.error.message)
                 );
               } else {
                 resolve(response);
               }
             } catch (err) {
               reject(
-                new (0, _chunkOJZJGHPScjs.NwcDecryptionError)(
+                new (0, _chunk6N6AEFRBcjs.NwcDecryptionError)(
                   method,
                   err instanceof Error ? err.message : String(err)
                 )
@@ -126,7 +126,7 @@ var NncClient = (_class = class _NncClient {
         if (allFailed) {
           clearTimeout(timer);
           sub.close();
-          reject(new (0, _chunkOJZJGHPScjs.NwcPublishError)(method, "All relays rejected the event"));
+          reject(new (0, _chunk6N6AEFRBcjs.NwcPublishError)(method, "All relays rejected the event"));
         }
       });
     });
@@ -209,7 +209,7 @@ var NncClient = (_class = class _NncClient {
     const results = await Promise.allSettled(publishPromises);
     const allFailed = results.every((r) => r.status === "rejected");
     if (allFailed) {
-      throw new (0, _chunkOJZJGHPScjs.NwcPublishError)("publish_grant", "All relays rejected the grant event");
+      throw new (0, _chunk6N6AEFRBcjs.NwcPublishError)("publish_grant", "All relays rejected the grant event");
     }
     return event.id;
   }
@@ -231,7 +231,7 @@ var NncClient = (_class = class _NncClient {
     const results = await Promise.allSettled(publishPromises);
     const allFailed = results.every((r) => r.status === "rejected");
     if (allFailed) {
-      throw new (0, _chunkOJZJGHPScjs.NwcPublishError)("revoke_grant", "All relays rejected the revoke event");
+      throw new (0, _chunk6N6AEFRBcjs.NwcPublishError)("revoke_grant", "All relays rejected the revoke event");
     }
     return event.id;
   }
@@ -279,26 +279,41 @@ var NncClient = (_class = class _NncClient {
   /**
    * Subscribe to NNC notification events (kind 23200).
    * Returns an unsubscribe function.
+   *
+   * Accepts either `string[]` (list of notification types) or a
+   * `SubscribeOptions` bag with `types`, `sinceNow`, and `onError`.
    */
-  async subscribeNotifications(handler, types) {
-    if (types && types.length > 0) {
-      await this.sendRequest("subscribe_notifications", { types });
+  async subscribeNotifications(handler, typesOrOpts) {
+    const opts = Array.isArray(typesOrOpts) ? { types: typesOrOpts } : _nullishCoalesce(typesOrOpts, () => ( {}));
+    if (opts.types && opts.types.length > 0) {
+      await this.sendRequest("subscribe_notifications", { types: opts.types });
     }
     const userPubkey = await this.signer.getPublicKey();
+    const filter = {
+      kinds: [NNC_NOTIFICATION_KIND],
+      authors: [this.servicePubkey],
+      "#p": [userPubkey]
+    };
+    if (opts.sinceNow) {
+      filter.since = Math.floor(Date.now() / 1e3);
+    }
     const sub = this.pool.subscribeMany(
       this.relayUrls,
-      {
-        kinds: [NNC_NOTIFICATION_KIND],
-        authors: [this.servicePubkey],
-        "#p": [userPubkey]
-      },
+      filter,
       {
         onevent: async (event) => {
           try {
             const decrypted = await this.signer.nip44Decrypt(event.pubkey, event.content);
             const notification = JSON.parse(decrypted);
-            handler(notification);
-          } catch (e2) {
+            handler(notification, {
+              eventId: event.id,
+              authorPubkey: event.pubkey,
+              createdAt: event.created_at
+            });
+          } catch (err) {
+            if (opts.onError) {
+              opts.onError(err, event.id);
+            }
           }
         }
       }
@@ -330,4 +345,4 @@ var NncClient = (_class = class _NncClient {
 
 
 exports.NNC_INFO_KIND = NNC_INFO_KIND; exports.NNC_REQUEST_KIND = NNC_REQUEST_KIND; exports.NNC_RESPONSE_KIND = NNC_RESPONSE_KIND; exports.NNC_NOTIFICATION_KIND = NNC_NOTIFICATION_KIND; exports.NNC_ERROR_CODES = NNC_ERROR_CODES; exports.parseConnectionString = parseConnectionString; exports.NncClient = NncClient;
-//# sourceMappingURL=chunk-BV7E32V6.cjs.map
+//# sourceMappingURL=chunk-3WIRFAYE.cjs.map

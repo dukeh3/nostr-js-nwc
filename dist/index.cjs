@@ -6,7 +6,7 @@
 
 
 
-var _chunkBV7E32V6cjs = require('./chunk-BV7E32V6.cjs');
+var _chunk3WIRFAYEcjs = require('./chunk-3WIRFAYE.cjs');
 
 
 
@@ -23,7 +23,7 @@ var _chunkBV7E32V6cjs = require('./chunk-BV7E32V6.cjs');
 
 
 
-var _chunkOJZJGHPScjs = require('./chunk-OJZJGHPS.cjs');
+var _chunk6N6AEFRBcjs = require('./chunk-6N6AEFRB.cjs');
 
 // src/signer/secret-key.ts
 var _pure = require('nostr-tools/pure');
@@ -428,5 +428,5 @@ var TransportEventEmitter = (_class4 = class {constructor() { _class4.prototype.
 
 
 
-exports.BrowserTransport = BrowserTransport; exports.NNC_ERROR_CODES = _chunkBV7E32V6cjs.NNC_ERROR_CODES; exports.NNC_INFO_KIND = _chunkBV7E32V6cjs.NNC_INFO_KIND; exports.NNC_NOTIFICATION_KIND = _chunkBV7E32V6cjs.NNC_NOTIFICATION_KIND; exports.NNC_REQUEST_KIND = _chunkBV7E32V6cjs.NNC_REQUEST_KIND; exports.NNC_RESPONSE_KIND = _chunkBV7E32V6cjs.NNC_RESPONSE_KIND; exports.NWC_ERROR_CODES = _chunkOJZJGHPScjs.NWC_ERROR_CODES; exports.NWC_INFO_KIND = _chunkOJZJGHPScjs.NWC_INFO_KIND; exports.NWC_NOTIFICATION_KIND = _chunkOJZJGHPScjs.NWC_NOTIFICATION_KIND; exports.NWC_REQUEST_KIND = _chunkOJZJGHPScjs.NWC_REQUEST_KIND; exports.NWC_RESPONSE_KIND = _chunkOJZJGHPScjs.NWC_RESPONSE_KIND; exports.Nip07Signer = Nip07Signer; exports.Nip46Signer = Nip46Signer; exports.NncClient = _chunkBV7E32V6cjs.NncClient; exports.NwcClient = _chunkOJZJGHPScjs.NwcClient; exports.NwcConnectionError = _chunkOJZJGHPScjs.NwcConnectionError; exports.NwcDecryptionError = _chunkOJZJGHPScjs.NwcDecryptionError; exports.NwcPublishError = _chunkOJZJGHPScjs.NwcPublishError; exports.NwcPublishTimeout = _chunkOJZJGHPScjs.NwcPublishTimeout; exports.NwcReplyTimeout = _chunkOJZJGHPScjs.NwcReplyTimeout; exports.NwcRequestError = _chunkOJZJGHPScjs.NwcRequestError; exports.NwcTimeoutError = _chunkOJZJGHPScjs.NwcTimeoutError; exports.NwcWalletError = _chunkOJZJGHPScjs.NwcWalletError; exports.SecretKeySigner = SecretKeySigner; exports.TransportEventEmitter = TransportEventEmitter; exports.createNip98AuthHeader = createNip98AuthHeader; exports.createNip98AuthHeaderWithMeta = createNip98AuthHeaderWithMeta; exports.parseConnectionString = _chunkOJZJGHPScjs.parseConnectionString; exports.parseNncConnectionString = _chunkBV7E32V6cjs.parseConnectionString;
+exports.BrowserTransport = BrowserTransport; exports.NNC_ERROR_CODES = _chunk3WIRFAYEcjs.NNC_ERROR_CODES; exports.NNC_INFO_KIND = _chunk3WIRFAYEcjs.NNC_INFO_KIND; exports.NNC_NOTIFICATION_KIND = _chunk3WIRFAYEcjs.NNC_NOTIFICATION_KIND; exports.NNC_REQUEST_KIND = _chunk3WIRFAYEcjs.NNC_REQUEST_KIND; exports.NNC_RESPONSE_KIND = _chunk3WIRFAYEcjs.NNC_RESPONSE_KIND; exports.NWC_ERROR_CODES = _chunk6N6AEFRBcjs.NWC_ERROR_CODES; exports.NWC_INFO_KIND = _chunk6N6AEFRBcjs.NWC_INFO_KIND; exports.NWC_NOTIFICATION_KIND = _chunk6N6AEFRBcjs.NWC_NOTIFICATION_KIND; exports.NWC_REQUEST_KIND = _chunk6N6AEFRBcjs.NWC_REQUEST_KIND; exports.NWC_RESPONSE_KIND = _chunk6N6AEFRBcjs.NWC_RESPONSE_KIND; exports.Nip07Signer = Nip07Signer; exports.Nip46Signer = Nip46Signer; exports.NncClient = _chunk3WIRFAYEcjs.NncClient; exports.NwcClient = _chunk6N6AEFRBcjs.NwcClient; exports.NwcConnectionError = _chunk6N6AEFRBcjs.NwcConnectionError; exports.NwcDecryptionError = _chunk6N6AEFRBcjs.NwcDecryptionError; exports.NwcPublishError = _chunk6N6AEFRBcjs.NwcPublishError; exports.NwcPublishTimeout = _chunk6N6AEFRBcjs.NwcPublishTimeout; exports.NwcReplyTimeout = _chunk6N6AEFRBcjs.NwcReplyTimeout; exports.NwcRequestError = _chunk6N6AEFRBcjs.NwcRequestError; exports.NwcTimeoutError = _chunk6N6AEFRBcjs.NwcTimeoutError; exports.NwcWalletError = _chunk6N6AEFRBcjs.NwcWalletError; exports.SecretKeySigner = SecretKeySigner; exports.TransportEventEmitter = TransportEventEmitter; exports.createNip98AuthHeader = createNip98AuthHeader; exports.createNip98AuthHeaderWithMeta = createNip98AuthHeaderWithMeta; exports.parseConnectionString = _chunk6N6AEFRBcjs.parseConnectionString; exports.parseNncConnectionString = _chunk3WIRFAYEcjs.parseConnectionString;
 //# sourceMappingURL=index.cjs.map

@@ -8,6 +8,10 @@ interface Nip07Extension {
     encrypt(pubkey: string, plaintext: string): Promise<string>
     decrypt(pubkey: string, ciphertext: string): Promise<string>
   }
+  nip04?: {
+    encrypt(pubkey: string, plaintext: string): Promise<string>
+    decrypt(pubkey: string, ciphertext: string): Promise<string>
+  }
 }
 
 function getNip07Extension(): Nip07Extension {
@@ -22,7 +26,7 @@ function getNip07Extension(): Nip07Extension {
 
 /**
  * Signer that delegates to a NIP-07 browser extension (Alby, nos2x, etc.).
- * Throws if the extension doesn't support NIP-44.
+ * Falls back to NIP-04 when the extension doesn't support NIP-44.
  */
 export class Nip07Signer implements NwcSigner {
   async getPublicKey(): Promise<string> {
@@ -35,17 +39,25 @@ export class Nip07Signer implements NwcSigner {
 
   async nip44Encrypt(pubkey: string, plaintext: string): Promise<string> {
     const ext = getNip07Extension()
-    if (!ext.nip44?.encrypt) {
-      throw new Error('Extension does not support NIP-44 encryption')
+    if (ext.nip44?.encrypt) {
+      return ext.nip44.encrypt(pubkey, plaintext)
     }
-    return ext.nip44.encrypt(pubkey, plaintext)
+    if (ext.nip04?.encrypt) {
+      console.warn('NIP-44 not supported by extension, falling back to NIP-04')
+      return ext.nip04.encrypt(pubkey, plaintext)
+    }
+    throw new Error('Extension does not support NIP-44 or NIP-04 encryption')
   }
 
   async nip44Decrypt(pubkey: string, ciphertext: string): Promise<string> {
     const ext = getNip07Extension()
-    if (!ext.nip44?.decrypt) {
-      throw new Error('Extension does not support NIP-44 decryption')
+    if (ext.nip44?.decrypt) {
+      return ext.nip44.decrypt(pubkey, ciphertext)
     }
-    return ext.nip44.decrypt(pubkey, ciphertext)
+    if (ext.nip04?.decrypt) {
+      console.warn('NIP-44 not supported by extension, falling back to NIP-04')
+      return ext.nip04.decrypt(pubkey, ciphertext)
+    }
+    throw new Error('Extension does not support NIP-44 or NIP-04 decryption')
   }
 }
