@@ -123,9 +123,9 @@ export interface ChannelInfo {
   peer_pubkey: string
   state: 'active' | 'inactive' | 'pending_open' | 'pending_close' | 'force_closing'
   is_private: boolean
-  local_balance_msat: number   // msats — aligned with NIP-47
-  remote_balance_msat: number  // msats
-  capacity_msat: number        // msats
+  local_balance: number
+  remote_balance: number
+  capacity: number
   funding_txid: string
   funding_output_index: number
 }
@@ -136,8 +136,8 @@ export interface ListChannelsResult {
 
 export interface OpenChannelParams {
   pubkey: string
-  amount_msat: number          // msats
-  push_amount_msat?: number    // msats
+  amount: number
+  push_amount?: number
   private?: boolean
   host?: string
   close_address?: string
@@ -212,9 +212,9 @@ export interface GetForwardingHistoryParams {
 export interface ForwardInfo {
   incoming_channel_id: string
   outgoing_channel_id: string
-  incoming_amount_msat: number  // msats
-  outgoing_amount_msat: number  // msats
-  fee_earned_msat: number       // msats
+  incoming_amount: number
+  outgoing_amount: number
+  fee_earned: number
   settled_at: number
 }
 
@@ -225,7 +225,7 @@ export interface GetForwardingHistoryResult {
 export interface HtlcInfo {
   channel_id: string
   direction: 'incoming' | 'outgoing'
-  amount_msat: number  // msats
+  amount: number
   hash_lock: string
   expiry_height: number
 }
@@ -236,19 +236,19 @@ export interface GetPendingHtlcsResult {
 
 export interface QueryRoutesParams {
   destination: string
-  amount_msat: number  // msats
+  amount: number
   max_routes?: number
 }
 
 export interface RouteHop {
   pubkey: string
   short_channel_id: string
-  fee_msat: number  // msats
+  fee: number
   expiry: number
 }
 
 export interface RouteInfo {
-  total_fee_msat: number  // msats
+  total_fee: number
   total_time_lock: number
   hops: RouteHop[]
 }
@@ -264,7 +264,7 @@ export interface NetworkNodeInfo {
   alias?: string
   color?: string
   num_channels: number
-  total_capacity_msat: number  // msats
+  total_capacity: number
   addresses?: string[]
   last_update: number
   features?: Record<string, unknown>
@@ -282,9 +282,9 @@ export interface ListNetworkNodesResult {
 export interface GetNetworkStatsResult {
   num_nodes: number
   num_channels: number
-  total_capacity_msat: number   // msats
-  avg_channel_size_msat: number // msats
-  max_channel_size_msat: number // msats
+  total_capacity: number
+  avg_channel_size: number
+  max_channel_size: number
 }
 
 export interface GetNetworkNodeParams {
@@ -309,7 +309,7 @@ export interface GetNetworkChannelParams {
 
 export interface GetNetworkChannelResult {
   short_channel_id: string
-  capacity_msat: number  // msats
+  capacity: number
   node1_pubkey: string
   node2_pubkey: string
   node1_policy?: ChannelPolicy
