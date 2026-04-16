@@ -6,7 +6,7 @@ import {
   NNC_RESPONSE_KIND,
   NncClient,
   parseConnectionString as parseConnectionString2
-} from "./chunk-SAHPIKNV.js";
+} from "./chunk-4GN3TVJF.js";
 import {
   NWC_ERROR_CODES,
   NWC_INFO_KIND,

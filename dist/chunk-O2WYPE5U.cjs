@@ -1,9 +1,9 @@
-import {
-  NwcDecryptionError,
-  NwcPublishError,
-  NwcReplyTimeout,
-  NwcWalletError
-} from "./chunk-KQQ3DFCC.js";
+"use strict";Object.defineProperty(exports, "__esModule", {value: true}); function _nullishCoalesce(lhs, rhsFn) { if (lhs != null) { return lhs; } else { return rhsFn(); } } function _optionalChain(ops) { let lastAccessLHS = undefined; let value = ops[0]; let i = 1; while (i < ops.length) { const op = ops[i]; const fn = ops[i + 1]; i += 2; if ((op === 'optionalAccess' || op === 'optionalCall') && value == null) { return undefined; } if (op === 'access' || op === 'optionalAccess') { lastAccessLHS = value; value = fn(value); } else if (op === 'call' || op === 'optionalCall') { value = fn((...args) => value.call(lastAccessLHS, ...args)); lastAccessLHS = undefined; } } return value; } var _class;
+
+
+
+
+var _chunk6N6AEFRBcjs = require('./chunk-6N6AEFRB.cjs');
 
 // nipXX.ts
 var GRANT_KIND = 30078;
@@ -39,20 +39,20 @@ function parseConnectionString(uri) {
   return { pubkey, relays };
 }
 var DEFAULT_TIMEOUT_MS = 3e4;
-var NncClient = class _NncClient {
-  signer;
-  servicePubkey;
-  relayUrls;
-  pool;
-  ownsPool;
-  timeoutMs;
-  subscriptions = [];
-  constructor(signer, servicePubkey, relayUrls, opts) {
+var NncClient = (_class = class _NncClient {
+  
+  
+  
+  
+  
+  
+  __init() {this.subscriptions = []}
+  constructor(signer, servicePubkey, relayUrls, opts) {;_class.prototype.__init.call(this);
     this.signer = signer;
     this.servicePubkey = servicePubkey;
     this.relayUrls = relayUrls;
-    this.timeoutMs = opts?.timeoutMs ?? DEFAULT_TIMEOUT_MS;
-    if (!opts?.pool) {
+    this.timeoutMs = _nullishCoalesce(_optionalChain([opts, 'optionalAccess', _ => _.timeoutMs]), () => ( DEFAULT_TIMEOUT_MS));
+    if (!_optionalChain([opts, 'optionalAccess', _2 => _2.pool])) {
       throw new Error("A pool instance is required. Pass { pool: new SimplePool() } in opts.");
     }
     this.pool = opts.pool;
@@ -83,7 +83,7 @@ var NncClient = class _NncClient {
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => {
         sub.close();
-        reject(new NwcReplyTimeout(method));
+        reject(new (0, _chunk6N6AEFRBcjs.NwcReplyTimeout)(method));
       }, this.timeoutMs);
       const sub = this.pool.subscribeMany(
         this.relayUrls,
@@ -104,14 +104,14 @@ var NncClient = class _NncClient {
               const response = JSON.parse(decrypted);
               if (response.error) {
                 reject(
-                  new NwcWalletError(method, response.error.code, response.error.message)
+                  new (0, _chunk6N6AEFRBcjs.NwcWalletError)(method, response.error.code, response.error.message)
                 );
               } else {
                 resolve(response);
               }
             } catch (err) {
               reject(
-                new NwcDecryptionError(
+                new (0, _chunk6N6AEFRBcjs.NwcDecryptionError)(
                   method,
                   err instanceof Error ? err.message : String(err)
                 )
@@ -126,7 +126,7 @@ var NncClient = class _NncClient {
         if (allFailed) {
           clearTimeout(timer);
           sub.close();
-          reject(new NwcPublishError(method, "All relays rejected the event"));
+          reject(new (0, _chunk6N6AEFRBcjs.NwcPublishError)(method, "All relays rejected the event"));
         }
       });
     });
@@ -155,14 +155,14 @@ var NncClient = class _NncClient {
   }
   // ─── Fees & Routing ───────────────────────────────────────────────────
   async getChannelFees(p) {
-    const r = await this.sendRequest("get_channel_fees", p ?? {});
+    const r = await this.sendRequest("get_channel_fees", _nullishCoalesce(p, () => ( {})));
     return r.result;
   }
   async setChannelFees(p) {
     await this.sendRequest("set_channel_fees", p);
   }
   async getForwardingHistory(p) {
-    const r = await this.sendRequest("get_forwarding_history", p ?? {});
+    const r = await this.sendRequest("get_forwarding_history", _nullishCoalesce(p, () => ( {})));
     return r.result;
   }
   async getPendingHtlcs() {
@@ -175,7 +175,7 @@ var NncClient = class _NncClient {
   }
   // ─── Network Graph ────────────────────────────────────────────────────
   async listNetworkNodes(p) {
-    const r = await this.sendRequest("list_network_nodes", p ?? {});
+    const r = await this.sendRequest("list_network_nodes", _nullishCoalesce(p, () => ( {})));
     return r.result;
   }
   async getNetworkStats() {
@@ -209,7 +209,7 @@ var NncClient = class _NncClient {
     const results = await Promise.allSettled(publishPromises);
     const allFailed = results.every((r) => r.status === "rejected");
     if (allFailed) {
-      throw new NwcPublishError("publish_grant", "All relays rejected the grant event");
+      throw new (0, _chunk6N6AEFRBcjs.NwcPublishError)("publish_grant", "All relays rejected the grant event");
     }
     return event.id;
   }
@@ -231,7 +231,7 @@ var NncClient = class _NncClient {
     const results = await Promise.allSettled(publishPromises);
     const allFailed = results.every((r) => r.status === "rejected");
     if (allFailed) {
-      throw new NwcPublishError("revoke_grant", "All relays rejected the revoke event");
+      throw new (0, _chunk6N6AEFRBcjs.NwcPublishError)("revoke_grant", "All relays rejected the revoke event");
     }
     return event.id;
   }
@@ -250,8 +250,8 @@ var NncClient = class _NncClient {
         { kinds: [GRANT_KIND], "#p": [this.servicePubkey], limit: 500 },
         {
           onevent: (event) => {
-            const dTag = event.tags?.find((t) => t[0] === "d")?.[1];
-            if (!dTag?.startsWith(this.servicePubkey + ":")) return;
+            const dTag = _optionalChain([event, 'access', _3 => _3.tags, 'optionalAccess', _4 => _4.find, 'call', _5 => _5((t) => t[0] === "d"), 'optionalAccess', _6 => _6[1]]);
+            if (!_optionalChain([dTag, 'optionalAccess', _7 => _7.startsWith, 'call', _8 => _8(this.servicePubkey + ":")])) return;
             const callerPubkey = dTag.slice(this.servicePubkey.length + 1);
             if (callerPubkey.length !== 64) return;
             if (!event.content) return;
@@ -263,7 +263,7 @@ var NncClient = class _NncClient {
                 eventId: event.id,
                 createdAt: event.created_at
               });
-            } catch {
+            } catch (e) {
             }
           },
           oneose: () => {
@@ -284,7 +284,7 @@ var NncClient = class _NncClient {
    * `SubscribeOptions` bag with `types`, `sinceNow`, and `onError`.
    */
   async subscribeNotifications(handler, typesOrOpts) {
-    const opts = Array.isArray(typesOrOpts) ? { types: typesOrOpts } : typesOrOpts ?? {};
+    const opts = Array.isArray(typesOrOpts) ? { types: typesOrOpts } : _nullishCoalesce(typesOrOpts, () => ( {}));
     if (opts.types && opts.types.length > 0) {
       await this.sendRequest("subscribe_notifications", { types: opts.types });
     }
@@ -334,15 +334,15 @@ var NncClient = class _NncClient {
       this.pool.close(this.relayUrls);
     }
   }
-};
+}, _class);
 
-export {
-  NNC_INFO_KIND,
-  NNC_REQUEST_KIND,
-  NNC_RESPONSE_KIND,
-  NNC_NOTIFICATION_KIND,
-  NNC_ERROR_CODES,
-  parseConnectionString,
-  NncClient
-};
-//# sourceMappingURL=chunk-SAHPIKNV.js.map
+
+
+
+
+
+
+
+
+exports.NNC_INFO_KIND = NNC_INFO_KIND; exports.NNC_REQUEST_KIND = NNC_REQUEST_KIND; exports.NNC_RESPONSE_KIND = NNC_RESPONSE_KIND; exports.NNC_NOTIFICATION_KIND = NNC_NOTIFICATION_KIND; exports.NNC_ERROR_CODES = NNC_ERROR_CODES; exports.parseConnectionString = parseConnectionString; exports.NncClient = NncClient;
+//# sourceMappingURL=chunk-O2WYPE5U.cjs.map
