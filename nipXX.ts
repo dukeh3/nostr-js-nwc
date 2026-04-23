@@ -136,8 +136,10 @@ export interface ListChannelsResult {
 
 export interface OpenChannelParams {
   pubkey: string
-  amount: number         // value in msats
-  push_amount?: number   // value in msats
+  /** Channel capacity in sats — funding tx output (on-chain). */
+  amount_sats: number
+  /** Amount to push to peer in msats — Lightning channel state. */
+  push_amount?: number
   private?: boolean
   host?: string
   close_address?: string
