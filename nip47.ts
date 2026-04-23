@@ -226,7 +226,9 @@ export interface LookupOfferResult {
 
 export interface PayOnchainParams {
   address: string
-  amount: number
+  /** Amount in sats — on-chain tx output. */
+  amount_sats: number
+  /** Fee rate in sat/vB, optional. */
   feerate?: number
 }
 
@@ -250,10 +252,12 @@ export interface LookupAddressParams {
 export interface LookupAddressResult {
   address: string
   type: string
-  total_received: number
+  /** Total received in sats — on-chain UTXO sum. */
+  total_received_sats: number
   transactions: Array<{
     txid: string
-    amount: number
+    /** Transaction amount in sats — on-chain. */
+    amount_sats: number
     confirmations: number
     timestamp: number
   }>
@@ -337,9 +341,12 @@ export interface ListTransactionsResult {
 }
 
 export interface GetBalanceResult {
+  /** Mixed total in msats (lightning_balance + onchain_balance_sats × 1000). */
   balance: number
+  /** Lightning balance in msats. */
   lightning_balance?: number
-  onchain_balance?: number
+  /** On-chain balance in sats — UTXO sum. */
+  onchain_balance_sats?: number
 }
 
 export interface GetInfoResult {
@@ -452,7 +459,8 @@ export interface ListAddressesParams {
 
 export interface AddressInfo {
   address: string
-  total_received: number
+  /** Total received in sats — on-chain UTXO sum. */
+  total_received_sats: number
 }
 
 export interface ListAddressesResult {
